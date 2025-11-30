@@ -1,0 +1,42 @@
+[package]
+name = "smoothie"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "smoothie_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "smoothie"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.5.3", features = [] }
+
+[dependencies]
+tauri = { version = "2.9.4", features = [] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "chrono", "uuid"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
+dotenv = "0.15"
+anyhow = "1.0"
+async-trait = "0.1"
+parking_lot = "0.12"
+lazy_static = "1.4"
+regex = "1.10"
+validator = { version = "0.16", features = ["derive"] }
+dashmap = "5.5"
+dirs = "5.0"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
