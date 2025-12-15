@@ -1,6 +1,11 @@
 # Smoothie - Desktop Workspace Profile Manager
 
+[![CI/CD](https://github.com/SinanGncgl/smoothie/actions/workflows/ci.yml/badge.svg)](https://github.com/SinanGncgl/smoothie/actions/workflows/ci.yml)
+[![Security](https://github.com/SinanGncgl/smoothie/actions/workflows/security.yml/badge.svg)](https://github.com/SinanGncgl/smoothie/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Contributors](https://img.shields.io/github/contributors/SinanGncgl/smoothie)](https://github.com/SinanGncgl/smoothie/graphs/contributors)
+[![Issues](https://img.shields.io/github/issues/SinanGncgl/smoothie)](https://github.com/SinanGncgl/smoothie/issues)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/SinanGncgl/smoothie/blob/main/CONTRIBUTING.md)
 
 A Tauri-based desktop application for managing and switching between different workspace profiles on macOS. Capture monitor arrangements, window positions, and running applications to create reusable workspace configurations.
 
@@ -190,10 +195,36 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- Development setup
+- Coding standards
+- Pull request process
+- Testing guidelines
+
+### Quick Start for Contributors
+
+```bash
+git clone https://github.com/SinanGncgl/smoothie.git
+cd smoothie
+pnpm install
+docker-compose up -d postgres
+pnpm tauri dev
+```
+
+## 📋 Community
+
+- [📖 Documentation](docs/README.md)
+- [🐛 Issue Tracker](https://github.com/SinanGncgl/smoothie/issues)
+- [💬 Discussions](https://github.com/SinanGncgl/smoothie/discussions)
+- [🤝 Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## 📞 Support
 
-If you have any questions or need help, please open an issue on GitHub.
+If you have any questions or need help:
+
+- 📧 Open an [issue](https://github.com/SinanGncgl/smoothie/issues) on GitHub
+- 💬 Check the [documentation](docs/README.md)
+- 🤝 Read our [contributing guide](CONTRIBUTING.md)
 
 ---
