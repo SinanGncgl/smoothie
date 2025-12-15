@@ -68,6 +68,9 @@ jobs:
         run: |
           brew install displayplacer
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Install frontend dependencies
         run: pnpm install
 
