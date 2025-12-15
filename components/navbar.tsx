@@ -1,7 +1,8 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { LayoutGrid, Settings, Monitor, FileText } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
 
 interface NavbarProps {
   currentView: string

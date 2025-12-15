@@ -1,6 +1,7 @@
 // Hook for system detection - monitors, windows, and running apps
 
 import { useState, useCallback, useEffect } from 'react';
+
 import { 
   systemApi, 
   SystemMonitor, 

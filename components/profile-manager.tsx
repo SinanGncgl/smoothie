@@ -1,15 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
 import {
   Plus,
   Trash2,
@@ -23,11 +14,18 @@ import {
   Camera,
   Crown,
 } from "lucide-react";
-import { motion } from "framer-motion";
-import { useProfiles } from "@/hooks/use-profiles";
-import { useSystemDetection } from "@/hooks/use-system-detection";
-import { useToast } from "@/hooks/use-toast";
-import { useSubscription } from "@/contexts/subscription-context";
+import { useState, useEffect, useCallback } from "react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +35,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -45,7 +45,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSubscription } from "@/contexts/subscription-context";
+import { useProfiles } from "@/hooks/use-profiles";
+import { useSystemDetection } from "@/hooks/use-system-detection";
+import { useToast } from "@/hooks/use-toast";
 import {
   appApi,
   browserTabApi,
@@ -56,9 +60,6 @@ import {
   type RunningApp,
   type InstalledApp,
 } from "@/lib/tauri";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProfileManagerProps {
   onSelectProfile: (id: string) => void;

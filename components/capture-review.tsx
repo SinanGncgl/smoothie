@@ -1,10 +1,13 @@
-import React from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Eye, Save, X, Monitor } from "lucide-react";
-import { CapturedLayout, SystemMonitor, RunningApp } from "@/lib/tauri";
+import React from "react";
+
 import { APPS_PREVIEW_LIMIT } from "./system-capture-constants";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CapturedLayout, SystemMonitor, RunningApp } from "@/lib/tauri";
+
 
 interface CaptureReviewProps {
   capturedLayout: CapturedLayout;
@@ -12,11 +15,11 @@ interface CaptureReviewProps {
   onDiscard: () => void;
 }
 
-export const CaptureReview = React.memo(function CaptureReview({ 
+export const CaptureReview = React.memo(({ 
   capturedLayout, 
   onSave, 
   onDiscard 
-}: CaptureReviewProps) {
+}: CaptureReviewProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}

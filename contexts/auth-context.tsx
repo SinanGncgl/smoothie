@@ -1,18 +1,24 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+
 import { setCurrentUserId } from "@/lib/tauri";
 
 // Simplified user type for local-only mode
 interface User {
   id: string;
   email: string;
+  user_metadata?: {
+    avatar_url?: string;
+    full_name?: string;
+  };
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isConfigured: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithGitHub: () => Promise<void>;
   signInWithApple: () => Promise<void>;
@@ -46,9 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {};
   const signInWithGitHub = async () => {};
   const signInWithApple = async () => {};
-  const signInWithEmail = async (email: string, password: string) => {};
-  const signUpWithEmail = async (email: string, password: string) => {};
-  const signInWithMagicLink = async (email: string) => {};
+  const signInWithEmail = async (_email: string, _password: string) => {};
+  const signUpWithEmail = async (_email: string, _password: string) => {};
+  const signInWithMagicLink = async (_email: string) => {};
   const signOut = async () => {};
   const refreshSession = async () => {};
 
@@ -56,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     isLoading,
     isAuthenticated: !!user,
+    isConfigured: true,
     signInWithGoogle,
     signInWithGitHub,
     signInWithApple,

@@ -1,17 +1,20 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Maximize2 } from "lucide-react";
-import { SystemMonitor } from "@/lib/tauri";
-import { calculateMonitorBounds, calculateMonitorScale, getMonitorPosition, MonitorBounds } from "./system-capture-utils";
+import React from "react";
+
 import { MONITOR_PREVIEW_HEIGHT, MONITOR_MIN_WIDTH, MONITOR_MIN_HEIGHT } from "./system-capture-constants";
+import { calculateMonitorBounds, calculateMonitorScale, getMonitorPosition, MonitorBounds } from "./system-capture-utils";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SystemMonitor } from "@/lib/tauri";
+
 
 interface MonitorArrangementProps {
   monitors: SystemMonitor[];
 }
 
-export const MonitorArrangement = React.memo(function MonitorArrangement({ monitors }: MonitorArrangementProps) {
+export const MonitorArrangement = React.memo(({ monitors }: MonitorArrangementProps) => {
   const bounds = calculateMonitorBounds(monitors);
   const scale = calculateMonitorScale(bounds);
 

@@ -1,7 +1,7 @@
+import { Monitor, Layout, AppWindow , Loader2 } from "lucide-react";
 import React from "react";
+
 import { Card, CardContent } from "@/components/ui/card";
-import { Monitor, Layout, AppWindow } from "lucide-react";
-import { Loader2 } from "lucide-react";
 
 interface SummaryCardsProps {
   monitorsCount: number;
@@ -10,12 +10,12 @@ interface SummaryCardsProps {
   isLoading: boolean;
 }
 
-export const SummaryCards = React.memo(function SummaryCards({ 
+export const SummaryCards = React.memo(({ 
   monitorsCount, 
   windowsCount, 
   appsCount, 
   isLoading 
-}: SummaryCardsProps) {
+}: SummaryCardsProps) => {
   return (
     <div className="grid grid-cols-3 gap-4">
       <Card className="bg-card/50">

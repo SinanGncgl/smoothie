@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Bell, User, Search, AlertCircle, Info, CheckCircle2, AlertTriangle, X, Loader2, LogOut, Settings } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { notificationApi, profileApi, isTauri, type SystemEvent } from "@/lib/tauri"
-import { useAuth } from "@/contexts/auth-context"
+import { useState, useEffect, useCallback, useRef } from "react"
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/auth-context"
+import { notificationApi, profileApi, isTauri, type SystemEvent } from "@/lib/tauri"
 
 interface Profile {
   id: string

@@ -1,15 +1,18 @@
 import React from "react";
+
+import { SCROLL_AREA_HEIGHT } from "./system-capture-constants";
+
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { RunningApp } from "@/lib/tauri";
-import { SCROLL_AREA_HEIGHT } from "./system-capture-constants";
+
 
 interface AppsListProps {
   runningApps: RunningApp[];
 }
 
-export const AppsList = React.memo(function AppsList({ runningApps }: AppsListProps) {
+export const AppsList = React.memo(({ runningApps }: AppsListProps) => {
   return (
     <ScrollArea className={`h-[${SCROLL_AREA_HEIGHT}px]`}>
       <div className="grid gap-2">

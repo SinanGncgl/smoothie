@@ -1,16 +1,19 @@
+import { AppWindow, Minimize2, Maximize2 } from "lucide-react";
 import React from "react";
+
+import { SCROLL_AREA_HEIGHT } from "./system-capture-constants";
+
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { AppWindow, Minimize2, Maximize2 } from "lucide-react";
 import { SystemWindow } from "@/lib/tauri";
-import { SCROLL_AREA_HEIGHT } from "./system-capture-constants";
+
 
 interface WindowsListProps {
   windows: SystemWindow[];
 }
 
-export const WindowsList = React.memo(function WindowsList({ windows }: WindowsListProps) {
+export const WindowsList = React.memo(({ windows }: WindowsListProps) => {
   return (
     <ScrollArea className={`h-[${SCROLL_AREA_HEIGHT}px]`}>
       <div className="grid gap-2">

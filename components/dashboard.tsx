@@ -1,19 +1,52 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Play, Trash2, Edit2, Clock, Monitor, Package, AlertCircle, Loader2, Camera } from "lucide-react"
-import { motion } from "framer-motion"
-import { useProfiles } from "@/hooks/use-profiles"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
+import { motion } from "framer-motion";
+import {
+  Plus,
+  Play,
+  Trash2,
+  Edit2,
+  Clock,
+  Monitor,
+  Package,
+  AlertCircle,
+  Loader2,
+  Camera,
+} from "lucide-react";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useProfiles } from "@/hooks/use-profiles";
 
 interface DashboardProps {
-  setCurrentView: (view: "dashboard" | "profiles" | "monitor" | "settings") => void
+  setCurrentView: (
+    view: "dashboard" | "profiles" | "monitor" | "settings",
+  ) => void;
 }
 
 // Profile colors mapping
@@ -22,20 +55,20 @@ const PROFILE_COLORS: Record<string, string> = {
   Gaming: "from-purple-400 to-pink-600",
   Research: "from-green-400 to-emerald-600",
   Custom: "from-orange-400 to-red-500",
-}
+};
 
 export function Dashboard({ setCurrentView }: DashboardProps) {
-  const { 
-    profiles, 
-    loading, 
-    error, 
+  const {
+    profiles,
+    loading,
+    error,
     isBackendConnected,
-    deleteProfile, 
+    deleteProfile,
     activateProfile,
     createProfile,
-    fetchProfiles
-  } = useProfiles()
-  
+    fetchProfiles,
+  } = useProfiles();
+
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newProfileName, setNewProfileName] = useState("")
@@ -46,43 +79,46 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteProfile(id)
+      await deleteProfile(id);
     } catch (err) {
       // Error already handled by hook
     }
-  }
+  };
 
   const handleActivate = async (id: string) => {
     try {
-      await activateProfile(id)
+      await activateProfile(id);
     } catch (err) {
       // Error already handled by hook
     }
-  }
+  };
 
   const handleCreateProfile = async () => {
-    if (!newProfileName.trim()) return
-    
-    setIsCreating(true)
+    if (!newProfileName.trim()) return;
+
+    setIsCreating(true);
     try {
-      await createProfile({
-        name: newProfileName,
-        description: newProfileDescription,
-        profileType: newProfileType,
-      }, captureCurrentMonitors)
-      setIsCreateDialogOpen(false)
-      setNewProfileName("")
-      setNewProfileDescription("")
-      setNewProfileType("Custom")
-      setCaptureCurrentMonitors(true)
+      await createProfile(
+        {
+          name: newProfileName,
+          description: newProfileDescription,
+          profileType: newProfileType,
+        },
+        captureCurrentMonitors,
+      );
+      setIsCreateDialogOpen(false);
+      setNewProfileName("");
+      setNewProfileDescription("");
+      setNewProfileType("Custom");
+      setCaptureCurrentMonitors(true);
       // Refresh profiles to ensure UI is updated
-      await fetchProfiles()
+      await fetchProfiles();
     } catch (err) {
       // Error already handled by hook
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -93,7 +129,7 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
         delayChildren: 0.1,
       },
     },
-  }
+  };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 16 },
@@ -102,11 +138,14 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
       y: 0,
       transition: { duration: 0.3, ease: "easeOut" as const },
     },
-  }
+  };
 
-  const activeProfile = profiles.find(p => p.isActive)
-  const totalMonitors = profiles.reduce((sum, p) => sum + (p.monitorCount || 0), 0)
-  const totalApps = profiles.reduce((sum, p) => sum + (p.appCount || 0), 0)
+  const activeProfile = profiles.find((p) => p.isActive);
+  const totalMonitors = profiles.reduce(
+    (sum, p) => sum + (p.monitorCount || 0),
+    0,
+  );
+  const totalApps = profiles.reduce((sum, p) => sum + (p.appCount || 0), 0);
 
   if (loading) {
     return (
@@ -116,15 +155,15 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
           <p className="text-muted-foreground">Loading profiles...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="h-full flex flex-col p-8 gap-8">
       {/* Backend Connection Status */}
       {error && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }} 
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-2 text-sm text-yellow-500 bg-yellow-500/10 px-4 py-2 rounded-lg"
         >
@@ -136,12 +175,18 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
 
       {/* Quick Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
           <Card className="bg-card/50 border-border/50 backdrop-blur">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Profiles</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Total Profiles
+                  </p>
                   <p className="text-3xl font-bold">{profiles.length}</p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -152,12 +197,18 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
           </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
           <Card className="bg-card/50 border-border/50 backdrop-blur">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Connected Monitors</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Connected Monitors
+                  </p>
                   <p className="text-3xl font-bold">{totalMonitors}</p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center">
@@ -168,12 +219,18 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
           </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
           <Card className="bg-card/50 border-border/50 backdrop-blur">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Apps Managed</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Apps Managed
+                  </p>
                   <p className="text-3xl font-bold">{totalApps}</p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-chart-1/10 flex items-center justify-center">
@@ -184,13 +241,21 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
           </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <Card className="bg-card/50 border-border/50 backdrop-blur">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Active Profile</p>
-                  <p className="text-2xl font-bold text-primary">{activeProfile?.name || "None"}</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Active Profile
+                  </p>
+                  <p className="text-2xl font-bold text-primary">
+                    {activeProfile?.name || "None"}
+                  </p>
                 </div>
                 <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
                   <Clock className="w-6 h-6 text-primary animate-pulse" />
@@ -205,10 +270,17 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Your Profiles</h3>
-            <p className="text-sm text-muted-foreground">Click to activate or manage your workspace layouts</p>
+            <h3 className="text-lg font-semibold text-foreground">
+              Your Profiles
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Click to activate or manage your workspace layouts
+            </p>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="w-4 h-4" />
@@ -240,7 +312,10 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="type">Type</Label>
-                  <Select value={newProfileType} onValueChange={setNewProfileType}>
+                  <Select
+                    value={newProfileType}
+                    onValueChange={setNewProfileType}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -253,13 +328,18 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
                   </Select>
                 </div>
                 <div className="flex items-center space-x-3 pt-2">
-                  <Checkbox 
-                    id="captureMonitors" 
+                  <Checkbox
+                    id="captureMonitors"
                     checked={captureCurrentMonitors}
-                    onCheckedChange={(checked) => setCaptureCurrentMonitors(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setCaptureCurrentMonitors(checked === true)
+                    }
                   />
                   <div className="flex flex-col">
-                    <Label htmlFor="captureMonitors" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                    <Label
+                      htmlFor="captureMonitors"
+                      className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                    >
                       <Camera className="w-4 h-4" />
                       Capture current monitor layout
                     </Label>
@@ -270,10 +350,16 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleCreateProfile} disabled={isCreating || !newProfileName.trim()}>
+                <Button
+                  onClick={handleCreateProfile}
+                  disabled={isCreating || !newProfileName.trim()}
+                >
                   {isCreating ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -304,7 +390,8 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
               <Card
                 className={cn(
                   "h-full hover:border-primary/50 transition-all duration-300 cursor-pointer group relative overflow-hidden",
-                  profile.isActive && "border-primary/50 ring-1 ring-primary/30",
+                  profile.isActive &&
+                    "border-primary/50 ring-1 ring-primary/30",
                 )}
               >
                 {/* Active Indicator */}
@@ -317,13 +404,17 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
                     className={`w-full h-28 bg-linear-to-br ${PROFILE_COLORS[profile.profileType] || PROFILE_COLORS.Custom} rounded-lg mb-4 opacity-75 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center`}
                   >
                     {profile.isActive && (
-                      <div className="text-white font-bold text-sm bg-black/30 px-3 py-1 rounded">Active</div>
+                      <div className="text-white font-bold text-sm bg-black/30 px-3 py-1 rounded">
+                        Active
+                      </div>
                     )}
                   </div>
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle>{profile.name}</CardTitle>
-                      <CardDescription>{profile.description || "No description"}</CardDescription>
+                      <CardDescription>
+                        {profile.description || "No description"}
+                      </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -333,8 +424,12 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
                     <div className="flex items-center gap-2 text-sm">
                       <Monitor className="w-4 h-4 text-primary" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Monitors</p>
-                        <p className="font-semibold">{profile.monitorCount || 0}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Monitors
+                        </p>
+                        <p className="font-semibold">
+                          {profile.monitorCount || 0}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
@@ -352,9 +447,9 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
                   </p>
 
                   <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      className="flex-1 gap-2" 
+                    <Button
+                      size="sm"
+                      className="flex-1 gap-2"
                       variant={profile.isActive ? "secondary" : "default"}
                       onClick={() => handleActivate(profile.id)}
                       disabled={profile.isActive}
@@ -362,9 +457,9 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
                       <Play className="w-4 h-4" />
                       {profile.isActive ? "Active" : "Activate"}
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       className="gap-1 bg-transparent"
                       onClick={() => setCurrentView("profiles")}
                     >
@@ -386,7 +481,7 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
 
           {/* Create New Profile Card */}
           <motion.div variants={itemVariants}>
-            <Card 
+            <Card
               className="h-full border-dashed hover:border-primary/50 transition-all duration-300 cursor-pointer flex items-center justify-center group"
               onClick={() => setIsCreateDialogOpen(true)}
             >
@@ -395,8 +490,12 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
                   <Plus className="w-7 h-7 text-primary" />
                 </div>
                 <div className="text-center">
-                  <p className="font-semibold text-foreground">Create Profile</p>
-                  <p className="text-sm text-muted-foreground">New workspace layout</p>
+                  <p className="font-semibold text-foreground">
+                    Create Profile
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    New workspace layout
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -404,9 +503,9 @@ export function Dashboard({ setCurrentView }: DashboardProps) {
         </motion.div>
       </div>
     </div>
-  )
+  );
 }
 
 function cn(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(" ")
+  return classes.filter(Boolean).join(" ");
 }

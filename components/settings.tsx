@@ -1,6 +1,11 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { Zap, Clock, Shield, RotateCcw, Info, Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useState, useEffect, useCallback } from "react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -17,9 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Zap, Clock, Shield, RotateCcw, Info, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
 import {
   userApi,
   isTauri,
@@ -27,8 +30,7 @@ import {
   profileApi,
   type Profile,
 } from "@/lib/tauri";
-import { useToast } from "@/hooks/use-toast";
-import { useTheme } from "next-themes";
+
 
 const DEFAULT_SETTINGS: UserSettings = {
   id: "",

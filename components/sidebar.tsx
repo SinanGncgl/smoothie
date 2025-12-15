@@ -2,8 +2,9 @@
 
 import { motion } from "framer-motion"
 import { LayoutGrid, Settings, Monitor, FileText, HelpCircle, Camera } from "lucide-react"
-import { cn } from "@/lib/utils"
 import Image from "next/image"
+
+import { cn } from "@/lib/utils"
 
 interface SidebarProps {
   currentView: string

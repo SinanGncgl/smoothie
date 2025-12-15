@@ -1,15 +1,16 @@
 "use client"
 
 import { useState } from "react"
+
 import { AuthGuard } from "@/components/auth-guard"
-import { Sidebar } from "@/components/sidebar"
-import { TopBar } from "@/components/top-bar"
 import { Dashboard } from "@/components/dashboard"
-import { ProfileManager } from "@/components/profile-manager"
-import { MonitorEditor } from "@/components/monitor-editor"
-import { SystemCapture } from "@/components/system-capture"
-import { Settings } from "@/components/settings"
 import { HelpSupport } from "@/components/help-support"
+import { MonitorEditor } from "@/components/monitor-editor"
+import { ProfileManager } from "@/components/profile-manager"
+import { Settings } from "@/components/settings"
+import { Sidebar } from "@/components/sidebar"
+import { SystemCapture } from "@/components/system-capture"
+import { TopBar } from "@/components/top-bar"
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<"dashboard" | "profiles" | "monitor" | "capture" | "settings" | "help">("dashboard")

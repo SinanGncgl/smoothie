@@ -1,7 +1,5 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { AnimatePresence, motion } from "framer-motion"
 import {
   Camera,
@@ -12,15 +10,20 @@ import {
   Eye,
   EyeOff
 } from "lucide-react"
-import { useSystemDetection } from "@/hooks/use-system-detection"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CapturedLayout } from "@/lib/tauri"
-import { SummaryCards } from "./summary-cards"
+import { useState } from "react"
+
+import { AppsList } from "./apps-list"
 import { CaptureReview } from "./capture-review"
 import { MonitorArrangement } from "./monitor-arrangement"
 import { MonitorList } from "./monitor-list"
+import { SummaryCards } from "./summary-cards"
 import { WindowsList } from "./windows-list"
-import { AppsList } from "./apps-list"
+
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useSystemDetection } from "@/hooks/use-system-detection"
+import { CapturedLayout } from "@/lib/tauri"
+
 
 interface SystemCaptureProps {
   onCaptureComplete?: (layout: unknown) => void

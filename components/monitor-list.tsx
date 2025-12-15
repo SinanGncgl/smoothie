@@ -1,7 +1,8 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Monitor } from "lucide-react";
+import React from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SystemMonitor, SystemWindow } from "@/lib/tauri";
 
 interface MonitorListProps {
@@ -9,7 +10,7 @@ interface MonitorListProps {
   windows: SystemWindow[];
 }
 
-export const MonitorList = React.memo(function MonitorList({ monitors, windows }: MonitorListProps) {
+export const MonitorList = React.memo(({ monitors, windows }: MonitorListProps) => {
   return (
     <div className="grid gap-3">
       {monitors.map((monitor) => {

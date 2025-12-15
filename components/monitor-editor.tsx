@@ -1,17 +1,17 @@
 "use client"
 
+import { motion } from "framer-motion"
+import { Plus, Trash2, Maximize2, Grid3X3, RefreshCw, Save, Loader2, Copy, Terminal, ZoomIn, ZoomOut } from "lucide-react"
 import type React from "react"
-import { useState, useRef, useEffect, useCallback } from "react"
-import { useMemo } from "react"
+import { useState, useRef, useEffect, useCallback , useMemo } from "react"
+
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, Maximize2, Grid3X3, RefreshCw, Save, Loader2, Copy, Terminal, ZoomIn, ZoomOut } from "lucide-react"
-import { motion } from "framer-motion"
 import { useSystemDetection } from "@/hooks/use-system-detection"
-import { monitorApi, isTauri, systemApi, profileApi, type Profile } from "@/lib/tauri"
 import { useToast } from "@/hooks/use-toast"
+import { monitorApi, isTauri, systemApi, profileApi, type Profile } from "@/lib/tauri"
 
 // Internal monitor representation uses ACTUAL pixel coordinates
 interface Monitor {

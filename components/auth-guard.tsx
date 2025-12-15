@@ -1,9 +1,11 @@
 "use client"
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/auth-context'
 import { Loader2, Monitor } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+
+import { useAuth } from '@/contexts/auth-context'
+
 
 interface AuthGuardProps {
   children: React.ReactNode

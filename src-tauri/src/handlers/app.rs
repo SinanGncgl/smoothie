@@ -87,7 +87,12 @@ pub async fn launch_apps(
   state: State<'_, Arc<AppState>>,
   profile_id: String,
 ) -> Result<SuccessResponse<Vec<LaunchResult>>> {
-  let results = AppService::launch_profile_apps(&state.db, &profile_id, "00000000-0000-0000-0000-000000000001").await?;
+  let results = AppService::launch_profile_apps(
+    &state.db,
+    &profile_id,
+    "00000000-0000-0000-0000-000000000001",
+  )
+  .await?;
 
   tracing::info!("Launched {} apps for profile {}", results.len(), profile_id);
 

@@ -57,22 +57,24 @@ impl AppService {
 
     // Log the app creation activity
     let audit_repo = crate::repositories::AuditRepository::new(db.pool());
-    let _ = audit_repo.log_activity(
-      user_uuid,
-      None, // session_id
-      "app_created",
-      Some("app"),
-      Some(entity.id),
-      Some(&name),
-      Some(serde_json::json!({
-        "bundle_id": bundle_id,
-        "profile_id": profile_id,
-        "launch_on_activate": launch_on_activate
-      })),
-      "success",
-      None,
-      None,
-    ).await;
+    let _ = audit_repo
+      .log_activity(
+        user_uuid,
+        None, // session_id
+        "app_created",
+        Some("app"),
+        Some(entity.id),
+        Some(&name),
+        Some(serde_json::json!({
+          "bundle_id": bundle_id,
+          "profile_id": profile_id,
+          "launch_on_activate": launch_on_activate
+        })),
+        "success",
+        None,
+        None,
+      )
+      .await;
 
     Ok(AppDto::from(entity))
   }
@@ -142,7 +144,11 @@ impl AppService {
   }
 
   /// Launch all launchable apps for a profile
-  pub async fn launch_profile_apps(db: &Database, profile_id: &str, user_id: &str) -> Result<Vec<LaunchResult>> {
+  pub async fn launch_profile_apps(
+    db: &Database,
+    profile_id: &str,
+    user_id: &str,
+  ) -> Result<Vec<LaunchResult>> {
     let apps = Self::get_launchable_apps(db, profile_id).await?;
     let mut results = Vec::new();
 
@@ -151,27 +157,37 @@ impl AppService {
     let audit_repo = crate::repositories::AuditRepository::new(db.pool());
 
     // Get current active profile activation for this user
-    let active_activation = audit_repo.get_active_profile_activation(user_uuid).await.ok().flatten();
+    let active_activation = audit_repo
+      .get_active_profile_activation(user_uuid)
+      .await
+      .ok()
+      .flatten();
 
     for app in apps {
       let app_uuid = parse_uuid(&app.id)?;
       let result = Self::launch_app_by_bundle_id(&app.bundle_id, &app.name);
-      
+
       // Log the app launch
-      let _ = audit_repo.record_app_launch(
-        user_uuid,
-        Some(profile_uuid),
-        active_activation.as_ref().map(|a| a.id),
-        Some(app_uuid),
-        &app.bundle_id,
-        &app.name,
-        app.exe_path.as_deref(),
-        result.success,
-        if result.success { None } else { Some(&result.message) },
-        None, // pid - could be captured if needed
-        None, // launch_duration_ms - could be measured
-        false, // window_positioned - will be set when windows are positioned
-      ).await;
+      let _ = audit_repo
+        .record_app_launch(
+          user_uuid,
+          Some(profile_uuid),
+          active_activation.as_ref().map(|a| a.id),
+          Some(app_uuid),
+          &app.bundle_id,
+          &app.name,
+          app.exe_path.as_deref(),
+          result.success,
+          if result.success {
+            None
+          } else {
+            Some(&result.message)
+          },
+          None,  // pid - could be captured if needed
+          None,  // launch_duration_ms - could be measured
+          false, // window_positioned - will be set when windows are positioned
+        )
+        .await;
 
       results.push(result);
       // Small delay between launches to avoid overwhelming the system

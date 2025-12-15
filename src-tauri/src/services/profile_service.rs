@@ -5,7 +5,9 @@ use crate::{
   models::dto::{
     AppDto, BrowserTabDto, CreateProfileRequest, MonitorDto, ProfileDto, ProfileResponse,
   },
-  repositories::{AppRepository, AuditRepository, BrowserTabRepository, MonitorRepository, ProfileRepository},
+  repositories::{
+    AppRepository, AuditRepository, BrowserTabRepository, MonitorRepository, ProfileRepository,
+  },
 };
 use uuid::Uuid;
 
@@ -46,10 +48,10 @@ impl ProfileService {
     req: CreateProfileRequest,
   ) -> Result<ProfileDto> {
     let user_uuid = parse_uuid(user_id)?;
-    
+
     // Ensure the user exists in the local database
     Self::ensure_user_exists(db, user_uuid).await?;
-    
+
     let repo = ProfileRepository::new(db.pool());
 
     let entity = repo
@@ -73,21 +75,23 @@ impl ProfileService {
 
     // Log the profile creation activity
     let audit_repo = AuditRepository::new(db.pool());
-    let _ = audit_repo.log_activity(
-      user_uuid,
-      None, // session_id - could be added later
-      "profile_created",
-      Some("profile"),
-      Some(entity.id),
-      Some(&req.name),
-      Some(serde_json::json!({
-        "profile_type": req.profile_type,
-        "description": req.description
-      })),
-      "success",
-      None,
-      None,
-    ).await;
+    let _ = audit_repo
+      .log_activity(
+        user_uuid,
+        None, // session_id - could be added later
+        "profile_created",
+        Some("profile"),
+        Some(entity.id),
+        Some(&req.name),
+        Some(serde_json::json!({
+          "profile_type": req.profile_type,
+          "description": req.description
+        })),
+        "success",
+        None,
+        None,
+      )
+      .await;
 
     // Re-fetch to get updated data with tags
     let updated = repo
@@ -119,10 +123,10 @@ impl ProfileService {
   /// Get all profiles for a user
   pub async fn get_profiles(db: &Database, user_id: &str) -> Result<Vec<ProfileDto>> {
     let user_uuid = parse_uuid(user_id)?;
-    
+
     // Ensure the user exists in the local database
     Self::ensure_user_exists(db, user_uuid).await?;
-    
+
     let repo = ProfileRepository::new(db.pool());
 
     let profiles = repo.find_by_user_id(user_uuid).await?;
@@ -286,47 +290,51 @@ impl ProfileService {
 
     // Log the profile activation
     let audit_repo = AuditRepository::new(db.pool());
-    let _ = audit_repo.record_profile_activation(
-      user_uuid,
-      profile_uuid,
-      None, // session_id
-      "manual", // activation_source
-      None, // previous_profile_id
-      Some(monitor_count as i32),
-      Some(monitor_count as i32), // assuming all applied
-      Some(app_count as i32),
-      Some(app_count as i32), // assuming all launched
-      Some(0), // apps_failed
-      Some(browser_tab_count as i32),
-      Some(browser_tab_count as i32), // assuming all opened
-      Some(0), // windows_restored
-      None, // duration_ms
-      true, // success
-      None, // error_message
-      None, // metadata
-    ).await;
+    let _ = audit_repo
+      .record_profile_activation(
+        user_uuid,
+        profile_uuid,
+        None,     // session_id
+        "manual", // activation_source
+        None,     // previous_profile_id
+        Some(monitor_count as i32),
+        Some(monitor_count as i32), // assuming all applied
+        Some(app_count as i32),
+        Some(app_count as i32), // assuming all launched
+        Some(0),                // apps_failed
+        Some(browser_tab_count as i32),
+        Some(browser_tab_count as i32), // assuming all opened
+        Some(0),                        // windows_restored
+        None,                           // duration_ms
+        true,                           // success
+        None,                           // error_message
+        None,                           // metadata
+      )
+      .await;
 
     tracing::info!(profile_id = %profile_id, user_id = %user_id, "Profile activated");
     METRICS.record_profile_activated();
 
     // Log the profile activation activity
     let audit_repo = AuditRepository::new(db.pool());
-    let _ = audit_repo.log_activity(
-      user_uuid,
-      None, // session_id
-      "profile_activated",
-      Some("profile"),
-      Some(activated.id),
-      Some(&activated.name),
-      Some(serde_json::json!({
-        "monitor_count": monitor_count,
-        "app_count": app_count,
-        "browser_tab_count": browser_tab_count
-      })),
-      "success",
-      None,
-      None,
-    ).await;
+    let _ = audit_repo
+      .log_activity(
+        user_uuid,
+        None, // session_id
+        "profile_activated",
+        Some("profile"),
+        Some(activated.id),
+        Some(&activated.name),
+        Some(serde_json::json!({
+          "monitor_count": monitor_count,
+          "app_count": app_count,
+          "browser_tab_count": browser_tab_count
+        })),
+        "success",
+        None,
+        None,
+      )
+      .await;
 
     Ok(ProfileDto::from_entity_with_counts(
       activated,

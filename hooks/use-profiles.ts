@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+
 import { profileApi, monitorApi, systemApi, isTauri, type Profile, type CreateProfileRequest, type SystemMonitor } from "@/lib/tauri";
 
 export function useProfiles() {
@@ -191,7 +192,7 @@ export function useProfiles() {
       for (let i = 0; i < connectedMonitors.length; i++) {
         const monitor = connectedMonitors[i];
         await monitorApi.createMonitor({
-          profileId: profileId,
+          profileId,
           name: monitor.name,
           resolution: monitor.resolution,
           orientation: monitor.orientation,

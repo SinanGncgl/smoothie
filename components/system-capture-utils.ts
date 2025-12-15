@@ -1,7 +1,8 @@
 // Utility functions for system capture component
 
-import { SystemMonitor } from "@/lib/tauri";
 import { MONITOR_PREVIEW_HEIGHT, MONITOR_PREVIEW_PADDING, MONITOR_PREVIEW_SCALE_FACTOR } from "./system-capture-constants";
+
+import { SystemMonitor } from "@/lib/tauri";
 
 export interface MonitorBounds {
   minX: number;
