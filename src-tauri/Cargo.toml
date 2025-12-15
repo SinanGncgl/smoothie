@@ -44,7 +44,7 @@ core-graphics = "0.24"
 core-foundation = "0.10"
 objc = "0.2"
 cocoa = "0.26"
-io-kit-sys = "0.4"
+io-kit-sys = "0.5"
 mach2 = "0.4"
 
 [profile.release]
