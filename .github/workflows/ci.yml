@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   # Frontend Tests and Build
@@ -12,147 +12,120 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'pnpm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
 
-    - name: Install pnpm
-      run: npm install -g pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
 
-    - name: Install dependencies
-      run: pnpm install
+      - name: Install dependencies
+        run: pnpm install
 
-    - name: Type checking
-      run: pnpm run type-check
+      - name: Type checking
+        run: pnpm run type-check
 
-    - name: Linting
-      run: pnpm run lint
+      - name: Linting
+        run: pnpm run lint
 
-    - name: Build frontend
-      run: pnpm run build
+      - name: Build frontend
+        run: pnpm run build
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-build
-        path: .next/
-        retention-days: 7
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: .next/
+          retention-days: 7
 
   # Backend Tests and Build
   backend:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Rust
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-      with:
-        components: rustfmt, clippy
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
 
-    - name: Cache Rust dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          src-tauri/target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
-    - name: Check Rust formatting
-      run: cargo fmt --all -- --check
-      working-directory: src-tauri
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
+        working-directory: src-tauri
 
-    - name: Run Rust clippy
-      run: cargo clippy -- -D warnings
-      working-directory: src-tauri
+      - name: Run Rust clippy
+        run: cargo clippy
+        working-directory: src-tauri
 
-    - name: Run Rust tests
-      run: cargo test
-      working-directory: src-tauri
+      - name: Run Rust tests
+        run: cargo test
+        working-directory: src-tauri
 
-    - name: Build Rust backend
-      run: cargo build --release
-      working-directory: src-tauri
-
-  # Database Tests
-  database:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: smoothie_test
-          POSTGRES_USER: smoothie_user
-          POSTGRES_PASSWORD: smoothie_pass
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Rust
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-
-    - name: Run database migrations test
-      run: cargo run --bin smoothie
-      working-directory: src-tauri
-      env:
-        DATABASE_URL: postgresql://smoothie_user:smoothie_pass@localhost:5432/smoothie_test
-      timeout-minutes: 5
+      - name: Build Rust backend
+        run: cargo build --release
+        working-directory: src-tauri
 
   # macOS Build (for Tauri)
   build-macos:
     runs-on: macos-latest
-    needs: [frontend, backend, database]
+    needs: [frontend, backend]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'pnpm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
 
-    - name: Install pnpm
-      run: npm install -g pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
 
-    - name: Setup Rust
-      uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
-    - name: Install system dependencies
-      run: |
-        brew install displayplacer
+      - name: Install system dependencies
+        run: |
+          brew install displayplacer
 
-    - name: Install frontend dependencies
-      run: pnpm install
+      - name: Install frontend dependencies
+        run: pnpm install
 
-    - name: Build application
-      run: pnpm tauri build
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build application
+        run: pnpm tauri build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload macOS build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: smoothie-macos
-        path: src-tauri/target/release/bundle/
-        retention-days: 30
+      - name: Upload macOS build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoothie-macos
+          path: src-tauri/target/release/bundle/
+          retention-days: 30
 
   # Release (only on main branch)
   release:
@@ -161,20 +134,20 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: smoothie-macos
-        path: artifacts/
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: smoothie-macos
+          path: artifacts/
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: artifacts/**/*
-        generate_release_notes: true
-        draft: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

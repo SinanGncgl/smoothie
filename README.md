@@ -1,7 +1,6 @@
 # Smoothie - Desktop Workspace Profile Manager
 
 [![CI/CD](https://github.com/SinanGncgl/smoothie/actions/workflows/ci.yml/badge.svg)](https://github.com/SinanGncgl/smoothie/actions/workflows/ci.yml)
-[![Security](https://github.com/SinanGncgl/smoothie/actions/workflows/security.yml/badge.svg)](https://github.com/SinanGncgl/smoothie/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Contributors](https://img.shields.io/github/contributors/SinanGncgl/smoothie)](https://github.com/SinanGncgl/smoothie/graphs/contributors)
 [![Issues](https://img.shields.io/github/issues/SinanGncgl/smoothie)](https://github.com/SinanGncgl/smoothie/issues)
