@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { profileApi, isTauri, type Profile, type CreateProfileRequest } from "@/lib/tauri";
+import { profileApi, monitorApi, systemApi, isTauri, type Profile, type CreateProfileRequest, type SystemMonitor } from "@/lib/tauri";
 
 export function useProfiles() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -13,21 +13,12 @@ export function useProfiles() {
     setLoading(true);
     setError(null);
     
-    console.log("[useProfiles] Checking if running in Tauri...");
-    console.log("[useProfiles] isTauri():", isTauri());
-    
     if (isTauri()) {
       try {
-        console.log("[useProfiles] Calling profileApi.getProfiles()...");
         const data = await profileApi.getProfiles();
-        console.log("[useProfiles] Received profiles:", data);
         setProfiles(data);
         setIsBackendConnected(true);
       } catch (err: unknown) {
-        console.error("[useProfiles] Failed to fetch profiles from backend:");
-        console.error("[useProfiles] Error:", err);
-        console.error("[useProfiles] Error type:", typeof err);
-        
         // Extract error message
         let errorMessage = "Failed to load profiles from database.";
         if (typeof err === "string") {
@@ -47,14 +38,12 @@ export function useProfiles() {
           }
         }
         
-        console.error("[useProfiles] Error message:", errorMessage);
         setError(errorMessage);
         setProfiles([]);
         setIsBackendConnected(false);
       }
     } else {
       // Browser mode - no backend available
-      console.log("[useProfiles] Running in browser mode - backend not available");
       setError("Running in browser mode. Please use the Tauri app for full functionality.");
       setProfiles([]);
       setIsBackendConnected(false);
@@ -67,32 +56,70 @@ export function useProfiles() {
     fetchProfiles();
   }, [fetchProfiles]);
 
-  const createProfile = useCallback(async (req: CreateProfileRequest) => {
+  const createProfile = useCallback(async (req: CreateProfileRequest, captureCurrentMonitors: boolean = false) => {
     if (!isTauri() || !isBackendConnected) {
       throw new Error("Backend not connected. Cannot create profile.");
     }
     
     try {
       const newProfile = await profileApi.createProfile(req);
+      
+      // If capture is enabled, detect and save current monitors
+      if (captureCurrentMonitors) {
+        try {
+          const connectedMonitors = await systemApi.getConnectedMonitors();
+          
+          // Save each monitor to the profile
+          for (let i = 0; i < connectedMonitors.length; i++) {
+            const monitor = connectedMonitors[i];
+            await monitorApi.createMonitor({
+              profileId: newProfile.id,
+              name: monitor.name,
+              resolution: monitor.resolution,
+              orientation: monitor.orientation,
+              isPrimary: monitor.isPrimary,
+              x: monitor.x,
+              y: monitor.y,
+              width: monitor.width,
+              height: monitor.height,
+              displayIndex: monitor.displayId,
+              brand: monitor.brand,
+              model: monitor.model,
+              refreshRate: monitor.refreshRate,
+              scaleFactor: monitor.scaleFactor,
+              isBuiltin: monitor.isBuiltin,
+              colorDepth: undefined,
+            });
+          }
+          
+          // Refresh the profile to get updated monitor count
+          const updatedProfile = await profileApi.getProfile(newProfile.id);
+          setProfiles((prev) => [...prev, updatedProfile]);
+          return updatedProfile;
+        } catch {
+          // Still return the profile even if monitor capture fails
+          setProfiles((prev) => [...prev, newProfile]);
+          return newProfile;
+        }
+      }
+      
       setProfiles((prev) => [...prev, newProfile]);
       return newProfile;
     } catch (err) {
-      console.error("Failed to create profile:", err);
       throw err;
     }
   }, [isBackendConnected]);
 
-  const updateProfile = useCallback(async (profileId: string, name?: string, description?: string) => {
+  const updateProfile = useCallback(async (profileId: string, updates: { name?: string; description?: string; isFavorite?: boolean; color?: string; icon?: string; sortOrder?: number }) => {
     if (!isTauri() || !isBackendConnected) {
       throw new Error("Backend not connected. Cannot update profile.");
     }
     
     try {
-      const updated = await profileApi.updateProfile(profileId, name, description);
+      const updated = await profileApi.updateProfile(profileId, updates);
       setProfiles((prev) => prev.map((p) => (p.id === profileId ? updated : p)));
       return updated;
     } catch (err) {
-      console.error("Failed to update profile:", err);
       throw err;
     }
   }, [isBackendConnected]);
@@ -106,7 +133,6 @@ export function useProfiles() {
       await profileApi.deleteProfile(profileId);
       setProfiles((prev) => prev.filter((p) => p.id !== profileId));
     } catch (err) {
-      console.error("Failed to delete profile:", err);
       throw err;
     }
   }, [isBackendConnected]);
@@ -121,12 +147,11 @@ export function useProfiles() {
       setProfiles((prev) =>
         prev.map((p) => ({
           ...p,
-          is_active: p.id === profileId,
+          isActive: p.id === profileId,
         }))
       );
       return activated;
     } catch (err) {
-      console.error("Failed to activate profile:", err);
       throw err;
     }
   }, [isBackendConnected]);
@@ -141,7 +166,55 @@ export function useProfiles() {
       setProfiles((prev) => [...prev, duplicated]);
       return duplicated;
     } catch (err) {
-      console.error("Failed to duplicate profile:", err);
+      throw err;
+    }
+  }, [isBackendConnected]);
+
+  // Save current monitors to an existing profile
+  const captureMonitorsToProfile = useCallback(async (profileId: string) => {
+    if (!isTauri() || !isBackendConnected) {
+      throw new Error("Backend not connected. Cannot capture monitors.");
+    }
+    
+    try {
+      // Get current monitors from the profile first (to avoid duplicates)
+      const existingMonitors = await monitorApi.getMonitors(profileId);
+      
+      // Delete existing monitors
+      for (const monitor of existingMonitors) {
+        await monitorApi.deleteMonitor(monitor.id);
+      }
+      
+      // Detect and save current monitors
+      const connectedMonitors = await systemApi.getConnectedMonitors();
+      
+      for (let i = 0; i < connectedMonitors.length; i++) {
+        const monitor = connectedMonitors[i];
+        await monitorApi.createMonitor({
+          profileId: profileId,
+          name: monitor.name,
+          resolution: monitor.resolution,
+          orientation: monitor.orientation,
+          isPrimary: monitor.isPrimary,
+          x: monitor.x,
+          y: monitor.y,
+          width: monitor.width,
+          height: monitor.height,
+          displayIndex: monitor.displayId,
+          brand: monitor.brand,
+          model: monitor.model,
+          refreshRate: monitor.refreshRate,
+          scaleFactor: monitor.scaleFactor,
+          isBuiltin: monitor.isBuiltin,
+          colorDepth: undefined,
+        });
+      }
+      
+      // Refresh the profile to get updated monitor count
+      const updatedProfile = await profileApi.getProfile(profileId);
+      setProfiles((prev) => prev.map((p) => (p.id === profileId ? updatedProfile : p)));
+      return updatedProfile;
+    } catch (err) {
       throw err;
     }
   }, [isBackendConnected]);
@@ -157,5 +230,6 @@ export function useProfiles() {
     deleteProfile,
     activateProfile,
     duplicateProfile,
+    captureMonitorsToProfile,
   };
 }

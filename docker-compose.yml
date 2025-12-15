@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: smoothie-postgres
+    environment:
+      POSTGRES_DB: smoothie_dev
+      POSTGRES_USER: smoothie_user
+      POSTGRES_PASSWORD: smoothie_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - smoothie-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smoothie_user -d smoothie_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Next.js development server
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://smoothie_user:smoothie_pass@postgres:5432/smoothie_dev
+    command: pnpm dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smoothie-network
+
+volumes:
+  postgres-data:
+
+networks:
+  smoothie-network:
+    driver: bridge

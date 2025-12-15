@@ -7,62 +7,62 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 pub struct BrowserTabRepository<'a> {
-    pool: &'a PgPool,
+  pool: &'a PgPool,
 }
 
 impl<'a> BrowserTabRepository<'a> {
-    pub fn new(pool: &'a PgPool) -> Self {
-        Self { pool }
-    }
+  pub fn new(pool: &'a PgPool) -> Self {
+    Self { pool }
+  }
 
-    /// Find all browser tabs for a profile
-    pub async fn find_by_profile_id(&self, profile_id: Uuid) -> Result<Vec<BrowserTabEntity>> {
-        sqlx::query_as::<_, BrowserTabEntity>(
-            r#"
-            SELECT id, profile_id, url, browser, monitor_id, tab_order, favicon, created_at
-            FROM browser_tabs 
-            WHERE profile_id = $1 
+  /// Find all browser tabs for a profile
+  pub async fn find_by_profile_id(&self, profile_id: Uuid) -> Result<Vec<BrowserTabEntity>> {
+    sqlx::query_as::<_, BrowserTabEntity>(
+      r#"
+            SELECT id, profile_id, url, browser, monitor_id, tab_order, favicon, created_at, updated_at
+            FROM browser_tabs
+            WHERE profile_id = $1
             ORDER BY tab_order
             "#,
-        )
-        .bind(profile_id)
-        .fetch_all(self.pool)
-        .await
-        .map_err(|e| SmoothieError::DatabaseError(e.to_string()))
-    }
+    )
+    .bind(profile_id)
+    .fetch_all(self.pool)
+    .await
+    .map_err(|e| SmoothieError::DatabaseError(e.to_string()))
+  }
 
-    /// Find a browser tab by ID
-    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<BrowserTabEntity>> {
-        sqlx::query_as::<_, BrowserTabEntity>(
-            r#"
-            SELECT id, profile_id, url, browser, monitor_id, tab_order, favicon, created_at
-            FROM browser_tabs 
+  /// Find a browser tab by ID
+  pub async fn find_by_id(&self, id: Uuid) -> Result<Option<BrowserTabEntity>> {
+    sqlx::query_as::<_, BrowserTabEntity>(
+      r#"
+            SELECT id, profile_id, url, browser, monitor_id, tab_order, favicon, created_at, updated_at
+            FROM browser_tabs
             WHERE id = $1
             "#,
-        )
-        .bind(id)
-        .fetch_optional(self.pool)
-        .await
-        .map_err(|e| SmoothieError::DatabaseError(e.to_string()))
-    }
+    )
+    .bind(id)
+    .fetch_optional(self.pool)
+    .await
+    .map_err(|e| SmoothieError::DatabaseError(e.to_string()))
+  }
 
-    /// Create a new browser tab
-    pub async fn create(
-        &self,
-        profile_id: Uuid,
-        url: &str,
-        browser: &str,
-        monitor_id: Uuid,
-        tab_order: i32,
-        favicon: Option<&str>,
-    ) -> Result<BrowserTabEntity> {
-        let id = Uuid::new_v4();
-        let now = Utc::now();
+  /// Create a new browser tab
+  pub async fn create(
+    &self,
+    profile_id: Uuid,
+    url: &str,
+    browser: &str,
+    monitor_id: Option<Uuid>,
+    tab_order: i32,
+    favicon: Option<&str>,
+  ) -> Result<BrowserTabEntity> {
+    let id = Uuid::new_v4();
+    let now = Utc::now();
 
-        sqlx::query(
+    sqlx::query(
             r#"
-            INSERT INTO browser_tabs (id, profile_id, url, browser, monitor_id, tab_order, favicon, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO browser_tabs (id, profile_id, url, browser, monitor_id, tab_order, favicon, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
             "#,
         )
         .bind(id)
@@ -77,44 +77,49 @@ impl<'a> BrowserTabRepository<'a> {
         .await
         .map_err(|e| SmoothieError::DatabaseError(e.to_string()))?;
 
-        self.find_by_id(id)
-            .await?
-            .ok_or_else(|| SmoothieError::NotFound("Browser tab not found after creation".into()))
-    }
+    self
+      .find_by_id(id)
+      .await?
+      .ok_or_else(|| SmoothieError::NotFound("Browser tab not found after creation".into()))
+  }
 
-    /// Update a browser tab
-    pub async fn update(&self, id: Uuid, url: Option<&str>) -> Result<BrowserTabEntity> {
-        sqlx::query("UPDATE browser_tabs SET url = COALESCE($1, url) WHERE id = $2")
-            .bind(url)
-            .bind(id)
-            .execute(self.pool)
-            .await
-            .map_err(|e| SmoothieError::DatabaseError(e.to_string()))?;
+  /// Update a browser tab
+  pub async fn update(&self, id: Uuid, url: Option<&str>) -> Result<BrowserTabEntity> {
+    let now = Utc::now();
+    sqlx::query("UPDATE browser_tabs SET url = COALESCE($1, url), updated_at = $2 WHERE id = $3")
+      .bind(url)
+      .bind(now)
+      .bind(id)
+      .execute(self.pool)
+      .await
+      .map_err(|e| SmoothieError::DatabaseError(e.to_string()))?;
 
-        self.find_by_id(id)
-            .await?
-            .ok_or_else(|| SmoothieError::NotFound("Browser tab not found".into()))
-    }
+    self
+      .find_by_id(id)
+      .await?
+      .ok_or_else(|| SmoothieError::NotFound("Browser tab not found".into()))
+  }
 
-    /// Delete a browser tab
-    pub async fn delete(&self, id: Uuid) -> Result<bool> {
-        let result = sqlx::query("DELETE FROM browser_tabs WHERE id = $1")
-            .bind(id)
-            .execute(self.pool)
-            .await
-            .map_err(|e| SmoothieError::DatabaseError(e.to_string()))?;
+  /// Delete a browser tab
+  pub async fn delete(&self, id: Uuid) -> Result<bool> {
+    let result = sqlx::query("DELETE FROM browser_tabs WHERE id = $1")
+      .bind(id)
+      .execute(self.pool)
+      .await
+      .map_err(|e| SmoothieError::DatabaseError(e.to_string()))?;
 
-        Ok(result.rows_affected() > 0)
-    }
+    Ok(result.rows_affected() > 0)
+  }
 
-    /// Delete all browser tabs for a profile
-    pub async fn delete_by_profile_id(&self, profile_id: Uuid) -> Result<u64> {
-        let result = sqlx::query("DELETE FROM browser_tabs WHERE profile_id = $1")
-            .bind(profile_id)
-            .execute(self.pool)
-            .await
-            .map_err(|e| SmoothieError::DatabaseError(e.to_string()))?;
+  /// Count browser tabs for a profile
+  pub async fn count_by_profile_id(&self, profile_id: Uuid) -> Result<i64> {
+    let (count,) =
+      sqlx::query_as::<_, (i64,)>("SELECT COUNT(*) FROM browser_tabs WHERE profile_id = $1")
+        .bind(profile_id)
+        .fetch_one(self.pool)
+        .await
+        .map_err(|e| SmoothieError::DatabaseError(e.to_string()))?;
 
-        Ok(result.rows_affected())
-    }
+    Ok(count)
+  }
 }

@@ -37,8 +37,9 @@ src-tauri/target/
 src-tauri/.env
 
 # Lock files (keep one package manager)
-pnpm-lock.yaml
+package-lock.json
 
 # Misc
 *.log
 *.local
+.github/runners/runner/

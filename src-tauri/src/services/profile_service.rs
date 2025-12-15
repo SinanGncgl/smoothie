@@ -1,10 +1,11 @@
 use crate::{
-    db::Database,
-    error::{Result, SmoothieError},
-    models::{
-        dto::{CreateProfileRequest, ProfileDto, ProfileResponse, MonitorDto, AppDto, BrowserTabDto},
-    },
-    repositories::{ProfileRepository, MonitorRepository, AppRepository, BrowserTabRepository},
+  db::Database,
+  error::{Result, SmoothieError},
+  logging::METRICS,
+  models::dto::{
+    AppDto, BrowserTabDto, CreateProfileRequest, MonitorDto, ProfileDto, ProfileResponse,
+  },
+  repositories::{AppRepository, AuditRepository, BrowserTabRepository, MonitorRepository, ProfileRepository},
 };
 use uuid::Uuid;
 
@@ -13,185 +14,528 @@ use uuid::Uuid;
 pub struct ProfileService;
 
 impl ProfileService {
-    /// Create a new profile
-    pub async fn create_profile(
-        db: &Database,
-        user_id: &str,
-        req: CreateProfileRequest,
-    ) -> Result<ProfileDto> {
-        let user_uuid = parse_uuid(user_id)?;
-        let repo = ProfileRepository::new(db.pool());
+  /// Ensure a user exists in the local database (creates if not exists)
+  async fn ensure_user_exists(db: &Database, user_id: Uuid) -> Result<()> {
+    let result = sqlx::query(
+      r#"
+      INSERT INTO users (id, created_at, updated_at)
+      VALUES ($1, NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING
+      "#,
+    )
+    .bind(user_id)
+    .execute(db.pool())
+    .await;
 
-        let entity = repo
-            .create(
-                user_uuid,
-                &req.name,
-                req.description.as_deref(),
-                &req.profile_type,
-            )
-            .await?;
-
-        // Insert tags if provided
-        if let Some(tags) = req.tags {
-            for tag in tags {
-                repo.add_tag(entity.id, &tag).await?;
-            }
-        }
-
-        tracing::info!(profile_id = %entity.id, user_id = %user_id, "Profile created");
-
-        // Re-fetch to get updated data with tags
-        let updated = repo.find_by_id(entity.id).await?
-            .ok_or_else(|| SmoothieError::NotFound("Profile not found".into()))?;
-        let tags = repo.find_tags(entity.id).await?;
-
-        Ok(ProfileDto::from_entity(updated, tags))
-    }
-
-    /// Get all profiles for a user
-    pub async fn get_profiles(db: &Database, user_id: &str) -> Result<Vec<ProfileDto>> {
-        let user_uuid = parse_uuid(user_id)?;
-        let repo = ProfileRepository::new(db.pool());
-
-        let profiles = repo.find_by_user_id(user_uuid).await?;
-        let mut result = Vec::with_capacity(profiles.len());
-
-        for profile in profiles {
-            let tags = repo.find_tags(profile.id).await?;
-            result.push(ProfileDto::from_entity(profile, tags));
-        }
-
-        Ok(result)
-    }
-
-    /// Get a specific profile
-    pub async fn get_profile(db: &Database, profile_id: &str) -> Result<ProfileDto> {
-        let profile_uuid = parse_uuid(profile_id)?;
-        let repo = ProfileRepository::new(db.pool());
-
-        let profile = repo.find_by_id(profile_uuid).await?
-            .ok_or_else(|| SmoothieError::NotFound("Profile not found".into()))?;
-        let tags = repo.find_tags(profile.id).await?;
-
-        Ok(ProfileDto::from_entity(profile, tags))
-    }
-
-    /// Get profile with full details (monitors, apps, browser tabs)
-    pub async fn get_profile_response(db: &Database, profile_id: &str) -> Result<ProfileResponse> {
-        let profile = Self::get_profile(db, profile_id).await?;
-        let monitors = MonitorService::get_monitors(db, profile_id).await?;
-        let apps = AppService::get_apps(db, profile_id).await?;
-        let browser_tabs = BrowserService::get_browser_tabs(db, profile_id).await?;
-
-        Ok(ProfileResponse {
-            id: profile.id,
-            name: profile.name,
-            description: profile.description,
-            profile_type: profile.profile_type,
-            is_active: profile.is_active,
-            tags: profile.tags,
-            monitors,
-            apps,
-            browser_tabs,
-            created_at: profile.created_at,
-            last_used: profile.last_used,
-        })
-    }
-
-    /// Update a profile
-    pub async fn update_profile(
-        db: &Database,
-        profile_id: &str,
-        name: Option<String>,
-        description: Option<String>,
-    ) -> Result<ProfileDto> {
-        let profile_uuid = parse_uuid(profile_id)?;
-        let repo = ProfileRepository::new(db.pool());
-
-        let updated = repo.update(profile_uuid, name.as_deref(), description.as_deref()).await?;
-        let tags = repo.find_tags(profile_uuid).await?;
-
-        tracing::info!(profile_id = %profile_id, "Profile updated");
-
-        Ok(ProfileDto::from_entity(updated, tags))
-    }
-
-    /// Delete a profile
-    pub async fn delete_profile(db: &Database, profile_id: &str) -> Result<()> {
-        let profile_uuid = parse_uuid(profile_id)?;
-        let repo = ProfileRepository::new(db.pool());
-
-        let deleted = repo.delete(profile_uuid).await?;
-        if !deleted {
-            return Err(SmoothieError::NotFound("Profile not found".into()));
-        }
-
-        tracing::info!(profile_id = %profile_id, "Profile deleted");
+    match result {
+      Ok(_) => {
+        tracing::debug!(user_id = %user_id, "User ensured in local database");
         Ok(())
+      }
+      Err(e) => {
+        tracing::error!(user_id = %user_id, error = %e, "Failed to ensure user exists");
+        Err(SmoothieError::DatabaseError(e.to_string()))
+      }
+    }
+  }
+
+  /// Create a new profile
+  pub async fn create_profile(
+    db: &Database,
+    user_id: &str,
+    req: CreateProfileRequest,
+  ) -> Result<ProfileDto> {
+    let user_uuid = parse_uuid(user_id)?;
+    
+    // Ensure the user exists in the local database
+    Self::ensure_user_exists(db, user_uuid).await?;
+    
+    let repo = ProfileRepository::new(db.pool());
+
+    let entity = repo
+      .create(
+        user_uuid,
+        &req.name,
+        req.description.as_deref(),
+        &req.profile_type,
+      )
+      .await?;
+
+    // Insert tags if provided
+    if let Some(tags) = req.tags {
+      for tag in tags {
+        repo.add_tag(entity.id, &tag).await?;
+      }
     }
 
-    /// Activate a profile (deactivates all others for the user)
-    pub async fn activate_profile(db: &Database, profile_id: &str, user_id: &str) -> Result<ProfileDto> {
-        let profile_uuid = parse_uuid(profile_id)?;
-        let user_uuid = parse_uuid(user_id)?;
-        let repo = ProfileRepository::new(db.pool());
+    tracing::info!(profile_id = %entity.id, user_id = %user_id, "Profile created");
+    METRICS.record_profile_created();
 
-        let activated = repo.activate(profile_uuid, user_uuid).await?;
-        let tags = repo.find_tags(profile_uuid).await?;
+    // Log the profile creation activity
+    let audit_repo = AuditRepository::new(db.pool());
+    let _ = audit_repo.log_activity(
+      user_uuid,
+      None, // session_id - could be added later
+      "profile_created",
+      Some("profile"),
+      Some(entity.id),
+      Some(&req.name),
+      Some(serde_json::json!({
+        "profile_type": req.profile_type,
+        "description": req.description
+      })),
+      "success",
+      None,
+      None,
+    ).await;
 
-        tracing::info!(profile_id = %profile_id, user_id = %user_id, "Profile activated");
+    // Re-fetch to get updated data with tags
+    let updated = repo
+      .find_by_id(entity.id)
+      .await?
+      .ok_or_else(|| SmoothieError::NotFound("Profile not found".into()))?;
+    let tags = repo.find_tags(entity.id).await?;
 
-        Ok(ProfileDto::from_entity(activated, tags))
-    }
+    // Get counts for related entities
+    let monitor_count = MonitorRepository::new(db.pool())
+      .count_by_profile_id(entity.id)
+      .await?;
+    let app_count = AppRepository::new(db.pool())
+      .count_by_profile_id(entity.id)
+      .await?;
+    let browser_tab_count = BrowserTabRepository::new(db.pool())
+      .count_by_profile_id(entity.id)
+      .await?;
 
-    /// Duplicate a profile
-    pub async fn duplicate_profile(
-        db: &Database,
-        profile_id: &str,
-        user_id: &str,
-    ) -> Result<ProfileDto> {
-        let source = Self::get_profile(db, profile_id).await?;
-        let new_name = format!("{} (Copy)", source.name);
+    Ok(ProfileDto::from_entity_with_counts(
+      updated,
+      tags,
+      monitor_count,
+      app_count,
+      browser_tab_count,
+    ))
+  }
 
-        let new_profile = Self::create_profile(
-            db,
-            user_id,
-            CreateProfileRequest {
-                name: new_name,
-                description: source.description,
-                profile_type: source.profile_type,
-                tags: Some(source.tags),
-            },
-        )
+  /// Get all profiles for a user
+  pub async fn get_profiles(db: &Database, user_id: &str) -> Result<Vec<ProfileDto>> {
+    let user_uuid = parse_uuid(user_id)?;
+    
+    // Ensure the user exists in the local database
+    Self::ensure_user_exists(db, user_uuid).await?;
+    
+    let repo = ProfileRepository::new(db.pool());
+
+    let profiles = repo.find_by_user_id(user_uuid).await?;
+    let mut result = Vec::with_capacity(profiles.len());
+
+    for profile in profiles {
+      let tags = repo.find_tags(profile.id).await?;
+
+      // Get counts for related entities
+      let monitor_count = MonitorRepository::new(db.pool())
+        .count_by_profile_id(profile.id)
+        .await?;
+      let app_count = AppRepository::new(db.pool())
+        .count_by_profile_id(profile.id)
+        .await?;
+      let browser_tab_count = BrowserTabRepository::new(db.pool())
+        .count_by_profile_id(profile.id)
         .await?;
 
-        // Copy monitors
-        let monitors = MonitorService::get_monitors(db, profile_id).await?;
-        for monitor in monitors {
-            MonitorService::create_monitor(
-                db,
-                &new_profile.id,
-                monitor.name,
-                monitor.resolution,
-                monitor.orientation,
-                monitor.is_primary,
-                monitor.x,
-                monitor.y,
-                monitor.width,
-                monitor.height,
-                monitor.display_index,
-            )
-            .await?;
-        }
-
-        tracing::info!(
-            source_id = %profile_id,
-            new_id = %new_profile.id,
-            "Profile duplicated"
-        );
-
-        Self::get_profile(db, &new_profile.id).await
+      result.push(ProfileDto::from_entity_with_counts(
+        profile,
+        tags,
+        monitor_count,
+        app_count,
+        browser_tab_count,
+      ));
     }
+
+    Ok(result)
+  }
+
+  /// Get a specific profile
+  pub async fn get_profile(db: &Database, profile_id: &str) -> Result<ProfileDto> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let repo = ProfileRepository::new(db.pool());
+
+    let profile = repo
+      .find_by_id(profile_uuid)
+      .await?
+      .ok_or_else(|| SmoothieError::NotFound("Profile not found".into()))?;
+    let tags = repo.find_tags(profile.id).await?;
+
+    // Get counts for related entities
+    let monitor_count = MonitorRepository::new(db.pool())
+      .count_by_profile_id(profile.id)
+      .await?;
+    let app_count = AppRepository::new(db.pool())
+      .count_by_profile_id(profile.id)
+      .await?;
+    let browser_tab_count = BrowserTabRepository::new(db.pool())
+      .count_by_profile_id(profile.id)
+      .await?;
+
+    Ok(ProfileDto::from_entity_with_counts(
+      profile,
+      tags,
+      monitor_count,
+      app_count,
+      browser_tab_count,
+    ))
+  }
+
+  /// Get profile with full details (monitors, apps, browser tabs)
+  pub async fn get_profile_response(db: &Database, profile_id: &str) -> Result<ProfileResponse> {
+    let profile = Self::get_profile(db, profile_id).await?;
+    let monitors = MonitorService::get_monitors(db, profile_id).await?;
+    let apps = AppService::get_apps(db, profile_id).await?;
+    let browser_tabs = BrowserService::get_browser_tabs(db, profile_id).await?;
+
+    Ok(ProfileResponse {
+      id: profile.id,
+      name: profile.name,
+      description: profile.description,
+      profile_type: profile.profile_type,
+      is_active: profile.is_active,
+      tags: profile.tags,
+      monitors,
+      apps,
+      browser_tabs,
+      created_at: profile.created_at,
+      last_used: profile.last_used,
+    })
+  }
+
+  /// Update a profile (basic - use update_profile_extended for v4 fields)
+  #[allow(dead_code)]
+  pub async fn update_profile(
+    db: &Database,
+    profile_id: &str,
+    name: Option<String>,
+    description: Option<String>,
+  ) -> Result<ProfileDto> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let repo = ProfileRepository::new(db.pool());
+
+    let updated = repo
+      .update(profile_uuid, name.as_deref(), description.as_deref())
+      .await?;
+    let tags = repo.find_tags(profile_uuid).await?;
+
+    // Get counts for related entities
+    let monitor_count = MonitorRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+    let app_count = AppRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+    let browser_tab_count = BrowserTabRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+
+    tracing::info!(profile_id = %profile_id, "Profile updated");
+
+    Ok(ProfileDto::from_entity_with_counts(
+      updated,
+      tags,
+      monitor_count,
+      app_count,
+      browser_tab_count,
+    ))
+  }
+
+  /// Delete a profile
+  pub async fn delete_profile(db: &Database, profile_id: &str) -> Result<()> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let repo = ProfileRepository::new(db.pool());
+
+    let deleted = repo.delete(profile_uuid).await?;
+    if !deleted {
+      return Err(SmoothieError::NotFound("Profile not found".into()));
+    }
+
+    tracing::info!(profile_id = %profile_id, "Profile deleted");
+    METRICS.record_profile_deleted();
+    Ok(())
+  }
+
+  /// Activate a profile (deactivates all others for the user)
+  pub async fn activate_profile(
+    db: &Database,
+    profile_id: &str,
+    user_id: &str,
+  ) -> Result<ProfileDto> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let user_uuid = parse_uuid(user_id)?;
+    let repo = ProfileRepository::new(db.pool());
+
+    let activated = repo.activate(profile_uuid, user_uuid).await?;
+    let tags = repo.find_tags(profile_uuid).await?;
+
+    // Get counts for related entities
+    let monitor_count = MonitorRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+    let app_count = AppRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+    let browser_tab_count = BrowserTabRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+
+    // Log the profile activation
+    let audit_repo = AuditRepository::new(db.pool());
+    let _ = audit_repo.record_profile_activation(
+      user_uuid,
+      profile_uuid,
+      None, // session_id
+      "manual", // activation_source
+      None, // previous_profile_id
+      Some(monitor_count as i32),
+      Some(monitor_count as i32), // assuming all applied
+      Some(app_count as i32),
+      Some(app_count as i32), // assuming all launched
+      Some(0), // apps_failed
+      Some(browser_tab_count as i32),
+      Some(browser_tab_count as i32), // assuming all opened
+      Some(0), // windows_restored
+      None, // duration_ms
+      true, // success
+      None, // error_message
+      None, // metadata
+    ).await;
+
+    tracing::info!(profile_id = %profile_id, user_id = %user_id, "Profile activated");
+    METRICS.record_profile_activated();
+
+    // Log the profile activation activity
+    let audit_repo = AuditRepository::new(db.pool());
+    let _ = audit_repo.log_activity(
+      user_uuid,
+      None, // session_id
+      "profile_activated",
+      Some("profile"),
+      Some(activated.id),
+      Some(&activated.name),
+      Some(serde_json::json!({
+        "monitor_count": monitor_count,
+        "app_count": app_count,
+        "browser_tab_count": browser_tab_count
+      })),
+      "success",
+      None,
+      None,
+    ).await;
+
+    Ok(ProfileDto::from_entity_with_counts(
+      activated,
+      tags,
+      monitor_count,
+      app_count,
+      browser_tab_count,
+    ))
+  }
+
+  /// Duplicate a profile
+  pub async fn duplicate_profile(
+    db: &Database,
+    profile_id: &str,
+    user_id: &str,
+  ) -> Result<ProfileDto> {
+    let source = Self::get_profile(db, profile_id).await?;
+    let new_name = format!("{} (Copy)", source.name);
+
+    let new_profile = Self::create_profile(
+      db,
+      user_id,
+      CreateProfileRequest {
+        name: new_name,
+        description: source.description,
+        profile_type: source.profile_type,
+        tags: Some(source.tags),
+      },
+    )
+    .await?;
+
+    // Copy monitors
+    let monitors = MonitorService::get_monitors(db, profile_id).await?;
+    for monitor in monitors {
+      MonitorService::create_monitor(
+        db,
+        &new_profile.id,
+        monitor.name,
+        monitor.resolution,
+        monitor.orientation,
+        monitor.is_primary,
+        monitor.x,
+        monitor.y,
+        monitor.width,
+        monitor.height,
+        monitor.display_index,
+      )
+      .await?;
+    }
+
+    tracing::info!(
+        source_id = %profile_id,
+        new_id = %new_profile.id,
+        "Profile duplicated"
+    );
+
+    Self::get_profile(db, &new_profile.id).await
+  }
+
+  /// Get favorite profiles for a user
+  pub async fn get_favorite_profiles(db: &Database, user_id: &str) -> Result<Vec<ProfileDto>> {
+    let user_uuid = parse_uuid(user_id)?;
+    let repo = ProfileRepository::new(db.pool());
+
+    let profiles = repo.find_favorites(user_uuid).await?;
+    let mut result = Vec::with_capacity(profiles.len());
+
+    for profile in profiles {
+      let tags = repo.find_tags(profile.id).await?;
+
+      let monitor_count = MonitorRepository::new(db.pool())
+        .count_by_profile_id(profile.id)
+        .await?;
+      let app_count = AppRepository::new(db.pool())
+        .count_by_profile_id(profile.id)
+        .await?;
+      let browser_tab_count = BrowserTabRepository::new(db.pool())
+        .count_by_profile_id(profile.id)
+        .await?;
+
+      result.push(ProfileDto::from_entity_with_counts(
+        profile,
+        tags,
+        monitor_count,
+        app_count,
+        browser_tab_count,
+      ));
+    }
+
+    Ok(result)
+  }
+
+  /// Get most used profiles for a user
+  pub async fn get_most_used_profiles(
+    db: &Database,
+    user_id: &str,
+    limit: i64,
+  ) -> Result<Vec<ProfileDto>> {
+    let user_uuid = parse_uuid(user_id)?;
+    let repo = ProfileRepository::new(db.pool());
+
+    let profiles = repo.find_most_used(user_uuid, limit).await?;
+    let mut result = Vec::with_capacity(profiles.len());
+
+    for profile in profiles {
+      let tags = repo.find_tags(profile.id).await?;
+
+      let monitor_count = MonitorRepository::new(db.pool())
+        .count_by_profile_id(profile.id)
+        .await?;
+      let app_count = AppRepository::new(db.pool())
+        .count_by_profile_id(profile.id)
+        .await?;
+      let browser_tab_count = BrowserTabRepository::new(db.pool())
+        .count_by_profile_id(profile.id)
+        .await?;
+
+      result.push(ProfileDto::from_entity_with_counts(
+        profile,
+        tags,
+        monitor_count,
+        app_count,
+        browser_tab_count,
+      ));
+    }
+
+    Ok(result)
+  }
+
+  /// Set favorite status for a profile
+  pub async fn set_favorite(
+    db: &Database,
+    profile_id: &str,
+    is_favorite: bool,
+  ) -> Result<ProfileDto> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let repo = ProfileRepository::new(db.pool());
+
+    let updated = repo.set_favorite(profile_uuid, is_favorite).await?;
+    let tags = repo.find_tags(profile_uuid).await?;
+
+    let monitor_count = MonitorRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+    let app_count = AppRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+    let browser_tab_count = BrowserTabRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+
+    tracing::info!(profile_id = %profile_id, is_favorite = %is_favorite, "Profile favorite status updated");
+
+    Ok(ProfileDto::from_entity_with_counts(
+      updated,
+      tags,
+      monitor_count,
+      app_count,
+      browser_tab_count,
+    ))
+  }
+
+  /// Update a profile with extended fields (v4)
+  pub async fn update_profile_extended(
+    db: &Database,
+    profile_id: &str,
+    name: Option<String>,
+    description: Option<String>,
+    is_favorite: Option<bool>,
+    color: Option<String>,
+    icon: Option<String>,
+    sort_order: Option<i32>,
+  ) -> Result<ProfileDto> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let repo = ProfileRepository::new(db.pool());
+
+    let updated = repo
+      .update_extended(
+        profile_uuid,
+        name.as_deref(),
+        description.as_deref(),
+        is_favorite,
+        color.as_deref(),
+        icon.as_deref(),
+        sort_order,
+      )
+      .await?;
+    let tags = repo.find_tags(profile_uuid).await?;
+
+    let monitor_count = MonitorRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+    let app_count = AppRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+    let browser_tab_count = BrowserTabRepository::new(db.pool())
+      .count_by_profile_id(profile_uuid)
+      .await?;
+
+    tracing::info!(profile_id = %profile_id, "Profile updated with extended fields");
+
+    Ok(ProfileDto::from_entity_with_counts(
+      updated,
+      tags,
+      monitor_count,
+      app_count,
+      browser_tab_count,
+    ))
+  }
 }
 
 // Helper services
@@ -200,70 +544,71 @@ pub struct AppService;
 pub struct BrowserService;
 
 impl MonitorService {
-    pub async fn create_monitor(
-        db: &Database,
-        profile_id: &str,
-        name: String,
-        resolution: String,
-        orientation: String,
-        is_primary: bool,
-        x: i32,
-        y: i32,
-        width: i32,
-        height: i32,
-        display_index: i32,
-    ) -> Result<MonitorDto> {
-        let profile_uuid = parse_uuid(profile_id)?;
-        let repo = MonitorRepository::new(db.pool());
+  #[allow(clippy::too_many_arguments)]
+  pub async fn create_monitor(
+    db: &Database,
+    profile_id: &str,
+    name: String,
+    resolution: String,
+    orientation: String,
+    is_primary: bool,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    display_index: i32,
+  ) -> Result<MonitorDto> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let repo = MonitorRepository::new(db.pool());
 
-        let entity = repo
-            .create(
-                profile_uuid,
-                &name,
-                &resolution,
-                &orientation,
-                is_primary,
-                x,
-                y,
-                width,
-                height,
-                display_index,
-            )
-            .await?;
+    let entity = repo
+      .create(
+        profile_uuid,
+        &name,
+        &resolution,
+        &orientation,
+        is_primary,
+        x,
+        y,
+        width,
+        height,
+        display_index,
+      )
+      .await?;
 
-        Ok(MonitorDto::from(entity))
-    }
+    Ok(MonitorDto::from(entity))
+  }
 
-    pub async fn get_monitors(db: &Database, profile_id: &str) -> Result<Vec<MonitorDto>> {
-        let profile_uuid = parse_uuid(profile_id)?;
-        let repo = MonitorRepository::new(db.pool());
+  pub async fn get_monitors(db: &Database, profile_id: &str) -> Result<Vec<MonitorDto>> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let repo = MonitorRepository::new(db.pool());
 
-        let monitors = repo.find_by_profile_id(profile_uuid).await?;
-        Ok(monitors.into_iter().map(MonitorDto::from).collect())
-    }
+    let monitors = repo.find_by_profile_id(profile_uuid).await?;
+    Ok(monitors.into_iter().map(MonitorDto::from).collect())
+  }
 }
 
 impl AppService {
-    pub async fn get_apps(db: &Database, profile_id: &str) -> Result<Vec<AppDto>> {
-        let profile_uuid = parse_uuid(profile_id)?;
-        let repo = AppRepository::new(db.pool());
+  pub async fn get_apps(db: &Database, profile_id: &str) -> Result<Vec<AppDto>> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let repo = AppRepository::new(db.pool());
 
-        let apps = repo.find_by_profile_id(profile_uuid).await?;
-        Ok(apps.into_iter().map(AppDto::from).collect())
-    }
+    let apps = repo.find_by_profile_id(profile_uuid).await?;
+    Ok(apps.into_iter().map(AppDto::from).collect())
+  }
 }
 
 impl BrowserService {
-    pub async fn get_browser_tabs(db: &Database, profile_id: &str) -> Result<Vec<BrowserTabDto>> {
-        let profile_uuid = parse_uuid(profile_id)?;
-        let repo = BrowserTabRepository::new(db.pool());
+  pub async fn get_browser_tabs(db: &Database, profile_id: &str) -> Result<Vec<BrowserTabDto>> {
+    let profile_uuid = parse_uuid(profile_id)?;
+    let repo = BrowserTabRepository::new(db.pool());
 
-        let tabs = repo.find_by_profile_id(profile_uuid).await?;
-        Ok(tabs.into_iter().map(BrowserTabDto::from).collect())
-    }
+    let tabs = repo.find_by_profile_id(profile_uuid).await?;
+    Ok(tabs.into_iter().map(BrowserTabDto::from).collect())
+  }
 }
 
 /// Parse a string as UUID
 fn parse_uuid(s: &str) -> Result<Uuid> {
-    Uuid::parse_str(s).map_err(|_| SmoothieError::ValidationError(format!("Invalid UUID: {}", s)))
+  Uuid::parse_str(s).map_err(|_| SmoothieError::ValidationError(format!("Invalid UUID: {}", s)))
 }

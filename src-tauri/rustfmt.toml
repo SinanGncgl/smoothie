@@ -1,0 +1,14 @@
+# Rust code formatting configuration
+# See: https://rust-lang.github.io/rustfmt/
+
+edition = "2021"
+max_width = 100
+hard_tabs = false
+tab_spaces = 2
+reorder_imports = true
+reorder_modules = true
+remove_nested_parens = true
+match_arm_leading_pipes = "Never"
+
+# Method chain formatting
+chain_width = 60

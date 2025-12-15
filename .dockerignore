@@ -1,0 +1,52 @@
+<file_path>
+smoothie/.dockerignore
+</file_path>
+
+<edit_description>
+Add .dockerignore file
+</edit_description>
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+dist
+build
+src-tauri/target
+
+# Development files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Database files (if any)
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp
+temp

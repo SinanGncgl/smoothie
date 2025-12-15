@@ -5,4 +5,3 @@ pub mod entities;
 
 // Re-export commonly used types
 pub use dto::*;
-pub use entities::*;

@@ -1,30 +1,22 @@
-// Repository module - data access layer with repository pattern
+//! Repository module - data access layer with repository pattern
+//!
+//! This module provides database access abstractions following the repository pattern.
+//! Repositories encapsulate data access logic and provide a clean API for services.
 
-mod profile_repository;
-mod monitor_repository;
 mod app_repository;
-mod browser_tab_repository;
+mod audit_repository;
 mod automation_repository;
-mod sync_repository;
+mod browser_tab_repository;
+mod monitor_repository;
+mod profile_repository;
+mod subscription_repository;
+mod user_settings_repository;
 
-pub use profile_repository::ProfileRepository;
-pub use monitor_repository::MonitorRepository;
 pub use app_repository::AppRepository;
-pub use browser_tab_repository::BrowserTabRepository;
+pub use audit_repository::AuditRepository;
 pub use automation_repository::AutomationRepository;
-pub use sync_repository::SyncRepository;
-
-use async_trait::async_trait;
-use sqlx::PgPool;
-
-/// Base repository trait for common CRUD operations
-#[async_trait]
-pub trait Repository<T, ID> {
-    async fn find_by_id(&self, id: ID) -> crate::error::Result<Option<T>>;
-    async fn delete(&self, id: ID) -> crate::error::Result<bool>;
-}
-
-/// Provides access to the database pool
-pub trait DatabaseAccess {
-    fn pool(&self) -> &PgPool;
-}
+pub use browser_tab_repository::BrowserTabRepository;
+pub use monitor_repository::MonitorRepository;
+pub use profile_repository::ProfileRepository;
+pub use subscription_repository::SubscriptionRepository;
+pub use user_settings_repository::UserSettingsRepository;

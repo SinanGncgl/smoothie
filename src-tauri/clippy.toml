@@ -1,0 +1,18 @@
+# Clippy (Rust linter) configuration
+# See: https://doc.rust-lang.org/clippy/
+
+msrv = "1.70"
+
+# Allow dead code (for future features)
+allow-dbg-in-tests = true
+allow-expect-in-tests = true
+allow-print-in-tests = true
+allow-unwrap-in-tests = true
+
+# Disable some overly strict lints
+too-many-arguments-threshold = 12
+cognitive-complexity-threshold = 25
+too-many-lines-threshold = 200
+
+# Allow mixed uninlined format args (common in logging)
+allow-mixed-uninlined-format-args = true
